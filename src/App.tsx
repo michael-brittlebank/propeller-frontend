@@ -1,16 +1,19 @@
 import * as React from 'react';
 import './App.css';
 import logo from './logo.svg';
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import { map } from 'lodash';
-import { IMedicationInterface } from './interfaces/medication.interface';
-import { IGroupConfigInterface } from './interfaces/groupConfig.interface';
+import { IMedicationInterface } from './interfaces/types/medication.interface';
+import { IErrorInterface } from './interfaces/responses/error.interface';
+import { IGroupConfigInterface } from './interfaces/types/groupConfig.interface';
+import { IErrorFieldInterface } from './interfaces/responses/errorField.interface';
 
 interface IState {
     currentSearch: string;
     searchResults: IMedicationInterface[];
     isInitialPageState: boolean;
     isSearchComplete: boolean;
+    error: IErrorInterface | undefined;
 }
 
 class App extends React.Component<any, IState> {
@@ -21,7 +24,8 @@ class App extends React.Component<any, IState> {
             currentSearch: '',
             searchResults: [],
             isInitialPageState: true,
-            isSearchComplete: false
+            isSearchComplete: false,
+            error: undefined
         };
         this._onSearchChange = this._onSearchChange.bind(this);
         this._submitGroupSearch = this._submitGroupSearch.bind(this);
@@ -56,10 +60,16 @@ class App extends React.Component<any, IState> {
                                             null
                                     }
                                 </div>
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    onClick={this._submitGroupSearch}>Submit</button>
+                                {
+                                    // display submit button if search string is not empty
+                                    this.state.currentSearch.length > 0 ?
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary"
+                                            onClick={this._submitGroupSearch}>Submit</button>
+                                        :
+                                        null
+                                }
                             </form>
                         </div>
                     </div>
@@ -109,9 +119,23 @@ class App extends React.Component<any, IState> {
                             null
                     }
                     {
-                        this.state.searchResults.length < 1 && this.state.isSearchComplete && !this.state.isInitialPageState ?
+                        !!this.state.error && this.state.isSearchComplete && !this.state.isInitialPageState ?
                             <div className="alert alert-warning" role="alert">
-                                No matching search results
+                                <h4>¡Errors encountered!</h4>
+                                <div className="row justify-content-center">
+                                    {map(this.state.error.elements, (errorField: IErrorFieldInterface, index: number) => {
+                                        return (
+                                            <div key={index} className="col-6 error-field">
+                                                <p>
+                                                    Id: {errorField.id}
+                                                </p>
+                                                <p>
+                                                    Field: {errorField.field}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                             :
                             null
@@ -124,16 +148,19 @@ class App extends React.Component<any, IState> {
     private _onSearchChange(e: React.ChangeEvent<HTMLInputElement>): void {
         // todo, add input debouncing
         const searchValue: string = e.target.value;
+        // reset ui after user input
         this.setState({
             currentSearch: searchValue,
             searchResults: [],
             isInitialPageState: false,
-            isSearchComplete: false
+            isSearchComplete: false,
+            error: undefined
         });
     }
 
     private _submitGroupSearch(e: React.MouseEvent<HTMLButtonElement>): void {
         e.preventDefault();
+        // only call api if search string is not empty
         if (this.state.currentSearch.length > 0) {
             axios({
                 method: 'GET',
@@ -148,8 +175,12 @@ class App extends React.Component<any, IState> {
                         isSearchComplete: true
                     });
                 })
-                .catch((err: any) => {
-                    console.warn(err);
+                .catch((error: AxiosError) => {
+                    // null check for ts happiness
+                    this.setState({
+                        error: !!error && !!error.response ? error.response.data : error,
+                        isSearchComplete: true
+                    });
                 });
         }
     }
