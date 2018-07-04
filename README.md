@@ -1,4 +1,4 @@
-# Infosec Institute Full Stack Exercise
+# Propeller Health - Front End Developer Skills Assessment
 
 ## Run the Application
 
