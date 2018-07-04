@@ -49,6 +49,7 @@ class App extends React.Component<any, IState> {
         this._submitGroupSearch = this._submitGroupSearch.bind(this);
         this._addRemoveDiseaseFilter = this._addRemoveDiseaseFilter.bind(this);
         this._filterSearchResults = this._filterSearchResults.bind(this);
+        this._addRemoveFormFactorFilter = this._addRemoveFormFactorFilter.bind(this);
     }
 
     public render() {
@@ -107,7 +108,10 @@ class App extends React.Component<any, IState> {
                                             <div key={index}>
                                                 <label htmlFor={id}>
                                                     {formFactor}
-                                                    <input type="checkbox" value="" id={id}/>
+                                                    <input type="checkbox"
+                                                           id={id}
+                                                           checked={this.state.appliedFilters.formFactors.indexOf(formFactor) !== -1}
+                                                           onChange={this._addRemoveFormFactorFilter.bind(this, formFactor)}/>
                                                 </label>
                                             </div>
                                         );
@@ -132,23 +136,36 @@ class App extends React.Component<any, IState> {
                                     })}
                                 </div>
                                 <div className="col-4">
-                                    <h5>Sensors</h5>
+                                    <h5>Sensors (todo)</h5>
                                     <div>
                                         <label htmlFor="sensor-na">
                                             No filter
                                             <input type="radio"
                                                    name="sensor"
-                                                   id="sensor-na"/>
+                                                   id="sensor-na"
+                                                   disabled={true}
+                                                   checked={true}
+                                                   readOnly={true}/>
                                         </label>
                                         <br/>
                                         <label htmlFor="sensor-yes">
                                             Has sensor
-                                            <input type="radio" name="sensor" id="sensor-yes"/>
+                                            <input type="radio"
+                                                   name="sensor"
+                                                   id="sensor-yes"
+                                                   disabled={true}
+                                                   checked={false}
+                                                   readOnly={true}/>
                                         </label>
                                         <br/>
                                         <label htmlFor="sensor-no">
                                             Does not have sensor
-                                            <input type="radio" name="sensor" id="sensor-no"/>
+                                            <input type="radio"
+                                                   name="sensor"
+                                                   id="sensor-no"
+                                                   disabled={true}
+                                                   checked={false}
+                                                   readOnly={true}/>
                                         </label>
                                     </div>
                                 </div>
@@ -295,17 +312,19 @@ class App extends React.Component<any, IState> {
         }
     }
 
-    private _addRemoveDiseaseFilter(disease: string): void {
+    private _addRemoveDiseaseFilter(diseaseFilter: string): void {
         let appliedDiseaseFilters: string[] = cloneDeep(this.state.appliedFilters.diseases);
-        if (this.state.appliedFilters.diseases.indexOf(disease) === -1) {
+        if (this.state.appliedFilters.diseases.indexOf(diseaseFilter) === -1) {
             // add disease to filter
             appliedDiseaseFilters = [
                 ...appliedDiseaseFilters,
-                disease
+                diseaseFilter
             ]
         } else {
             // remove disease from filter
-            appliedDiseaseFilters = filter(this.state.appliedFilters.diseases, disease);
+            appliedDiseaseFilters = filter(this.state.appliedFilters.diseases, (disease: string) => {
+                return disease !== diseaseFilter
+            });
         }
         this.setState(
             {
@@ -318,6 +337,33 @@ class App extends React.Component<any, IState> {
                 this._filterSearchResults();
             });
     }
+
+    private _addRemoveFormFactorFilter(formFactorFilter: string): void {
+        let appliedFormFactorFilters: string[] = cloneDeep(this.state.appliedFilters.formFactors);
+        if (this.state.appliedFilters.formFactors.indexOf(formFactorFilter) === -1) {
+            // add disease to filter
+            appliedFormFactorFilters = [
+                ...appliedFormFactorFilters,
+                formFactorFilter
+            ]
+        } else {
+            // remove disease from filter
+            appliedFormFactorFilters = filter(this.state.appliedFilters.formFactors, (formFactor: string) => {
+                return formFactor !== formFactorFilter
+            });
+        }
+        this.setState(
+            {
+                appliedFilters: {
+                    ...this.state.appliedFilters,
+                    formFactors: appliedFormFactorFilters
+                }
+            },
+            () => {
+                this._filterSearchResults();
+            });
+    }
+
 
     private _filterSearchResults(): void {
         this.setState({
@@ -334,7 +380,12 @@ class App extends React.Component<any, IState> {
                         return false;
                     }
                 }
-                // filter form factors // todo
+                // filter form factors
+                if (this.state.appliedFilters.formFactors.length > 0) {
+                    if (this.state.appliedFilters.formFactors.indexOf(medication.formFactor) === -1) {
+                        return false
+                    }
+                }
                 return true;
             })
         });
